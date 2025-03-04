@@ -7,5 +7,9 @@ import java.util.List;
 
 public interface ICourseRepository extends JpaRepository<Course, Long> {
 
-    List<Course> findByName(String name);
+    List<Course> findByNameContaining(String name);
+
+    List<Course> findByPeriod(String period);
+
+    List<Course> findByNameContainingAndPeriod(String name, String period);
 }

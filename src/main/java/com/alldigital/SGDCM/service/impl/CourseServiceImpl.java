@@ -26,7 +26,17 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public List<Course> findAllByName(String name) {
-        return courseRepository.findByName(name);
+        return courseRepository.findByNameContaining(name);
+    }
+
+    @Override
+    public List<Course> findByPeriod(String period) {
+        return courseRepository.findByPeriod(period);
+    }
+
+    @Override
+    public List<Course> findAllByNameAndPeriod(String name, String period) {
+        return courseRepository.findByNameContainingAndPeriod(name, period);
     }
 
     @Override

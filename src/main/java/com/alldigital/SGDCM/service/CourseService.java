@@ -12,6 +12,10 @@ public interface CourseService {
 
     List<Course> findAllByName(String name);
 
+    List<Course> findByPeriod(String period);
+
+    List<Course> findAllByNameAndPeriod(String name, String period);
+
     Course saveCourse(Course course);
 
 
