@@ -12,22 +12,22 @@ public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "Id_curso")
-     Long id;
+    private Long id;
 
     @Column(name = "nombre_curso", nullable = false)
-     String name;
+    private String name;
 
     @Column(name = "calificacion_min", nullable = false)
-     int minQualification;
+    private int minQualification;
 
     @Column(name = "fecha_corte", nullable = false)
-     LocalDate cutoffDate;
+    private LocalDate cutoffDate;
 
     @Column(name = "periodo", nullable = false)
-     String period;
+    private String period;
 
     @Column(name = "descripcion")
-     String description;
+    private String description;
 
     public Long getId() {
         return id;

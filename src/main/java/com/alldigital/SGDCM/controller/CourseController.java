@@ -25,7 +25,7 @@ public class CourseController {
     private CourseService courseService;
 
     @GetMapping("/lista")
-    public List<Course> getCourses(){
+    public List<Course> getAllCourses(){
         var courses = courseService.findAll();
         if (courses.isEmpty()){
             throw new NotFoundException("No se encontraron cursos disponibles");
