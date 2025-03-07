@@ -1,6 +1,7 @@
 package com.alldigital.SGDCM.service;
 
 import com.alldigital.SGDCM.entity.User;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,5 +15,7 @@ public interface UserService {
 
     User updateOneById(Long id, User user);
 
-    void deleteOneById(Long id);
+    //void deleteOneById(Long id);
+
+    void deleteByMatricula(String matricula);
 }

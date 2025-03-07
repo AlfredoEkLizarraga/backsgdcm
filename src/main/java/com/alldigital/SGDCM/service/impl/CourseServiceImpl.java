@@ -1,11 +1,13 @@
 package com.alldigital.SGDCM.service.impl;
 
 import com.alldigital.SGDCM.entity.Course;
+import com.alldigital.SGDCM.entity.User;
 import com.alldigital.SGDCM.repository.ICourseRepository;
 import com.alldigital.SGDCM.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -25,7 +27,7 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public List<Course> findAllByName(String name) {
+    public List<Course> findByNameContaining(String name) {
         return courseRepository.findByNameContaining(name);
     }
 
@@ -35,8 +37,13 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public List<Course> findAllByNameAndPeriod(String name, String period) {
-        return courseRepository.findByNameContainingAndPeriod(name, period);
+    public List<Course> findByCutoffDate(LocalDate cutoffDate) {
+        return courseRepository.findByCutoffDate(cutoffDate);
+    }
+
+    @Override
+    public List<Course> findAllByNameAndPeriodAndCutoffDate(String name, String period, LocalDate cutoffDate) {
+        return courseRepository.findByNameContainingAndPeriodAndCutoffDate(name, period, cutoffDate);
     }
 
     @Override
@@ -44,6 +51,16 @@ public class CourseServiceImpl implements CourseService {
         return courseRepository.save(course);
     }
 
+    @Override
+    public Course updateOneById(Long id, Course course) {
+        Course oldCourse = this.findOneById(id);
+        oldCourse.setName(course.getName());
+        oldCourse.setMinQualification(course.getMinQualification());
+        oldCourse.setCutoffDate(course.getCutoffDate());
+        oldCourse.setPeriod(course.getPeriod());
+        oldCourse.setDescription(course.getDescription());
+        return courseRepository.save(oldCourse);
+    }
 
 
     @Override

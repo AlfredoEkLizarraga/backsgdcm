@@ -24,13 +24,13 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
-    public List<User> getAllUsers(){
+    public ResponseEntity<List<User>> getAllUsers(){
         var users = userService.getAllUsers();
         if (users.isEmpty()){
             throw new NotFoundException("No se encontraron usuarios disponibles");
         }
         users.forEach((user -> logger.info(user.toString())));
-        return users;
+        return ResponseEntity.ok(users);
     }
 
     @PostMapping
@@ -52,13 +52,21 @@ public class UserController {
 
     @PutMapping(value = "/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user){
-        User updateUser = userService.updateOneById(id, user);
-        return ResponseEntity.ok().build();
+        try {
+            User updateUser = userService.updateOneById(id, user);
+            return ResponseEntity.ok().build();
+        }catch (NotFoundException ex){
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    @DeleteMapping(value = "/{id}")
-    public ResponseEntity<Void> deleteOneById(@PathVariable Long id){
-        userService.deleteOneById(id);
-        return ResponseEntity.noContent().build();
+    @DeleteMapping(value = "/{matricula}")
+    public ResponseEntity<Void> deleteOneByMatricula(@PathVariable String matricula){
+        try{
+            userService.deleteByMatricula(matricula);
+            return ResponseEntity.noContent().build();
+        }catch (NotFoundException ex){
+            return ResponseEntity.notFound().build();
+        }
     }
 }
