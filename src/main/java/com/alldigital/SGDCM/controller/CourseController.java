@@ -27,13 +27,13 @@ public class CourseController {
     private CourseService courseService;
 
     @GetMapping("/lista")
-    public List<Course> getAllCourses(){
+    public ResponseEntity<List<Course>> getAllCourses(){
         var courses = courseService.findAll();
         if (courses.isEmpty()){
             throw new NotFoundException("No se encontraron cursos disponibles");
         }
         courses.forEach((course -> logger.info(course.toString())));
-        return courses;
+        return ResponseEntity.ok(courses);
     }
 
     @GetMapping

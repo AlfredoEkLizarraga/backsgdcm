@@ -4,6 +4,8 @@ import com.alldigital.SGDCM.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 
+import java.util.Optional;
+
 public interface IUserRepository extends JpaRepository<User, Long> {
     //User findByName(String name);
 
@@ -11,4 +13,6 @@ public interface IUserRepository extends JpaRepository<User, Long> {
 
     @Modifying
     int deleteOneByMatricula(String matricula);
+
+    Optional<User> findByMatricula(String matricula);
 }

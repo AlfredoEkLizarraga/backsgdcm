@@ -58,6 +58,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User findOneByMatricula(String matricula) {
+        return userRepository.findByMatricula(matricula)
+                .orElseThrow(() -> new NotFoundException("[user:" + matricula + "]"));
+    }
+
+    @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }

@@ -1,5 +1,6 @@
 package com.alldigital.SGDCM.service;
 
+import com.alldigital.SGDCM.entity.Course;
 import com.alldigital.SGDCM.entity.User;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,4 +19,6 @@ public interface UserService {
     //void deleteOneById(Long id);
 
     void deleteByMatricula(String matricula);
+
+    User findOneByMatricula(String matricula);
 }

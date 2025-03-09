@@ -33,6 +33,8 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    @GetMapping()
+
     @PostMapping
     public ResponseEntity<?> createOneUser(@RequestBody User newUser, HttpServletRequest request){
         try{
