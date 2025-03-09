@@ -29,11 +29,17 @@ public class UserController {
         if (users.isEmpty()){
             throw new NotFoundException("No se encontraron usuarios disponibles");
         }
-        users.forEach((user -> logger.info(user.toString())));
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping()
+    @GetMapping(value = "/{matricula}")
+    public ResponseEntity<User> findOneByMatricula(@PathVariable String matricula){
+        try {
+            return ResponseEntity.ok(userService.findOneByMatricula(matricula));
+        }catch (NotFoundException ex){
+            return ResponseEntity.notFound().build();
+        }
+    }
 
     @PostMapping
     public ResponseEntity<?> createOneUser(@RequestBody User newUser, HttpServletRequest request){

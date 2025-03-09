@@ -6,6 +6,7 @@ import com.alldigital.SGDCM.repository.ICourseRepository;
 import com.alldigital.SGDCM.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -47,11 +48,13 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
+    @Transactional
     public Course saveCourse(Course course) {
         return courseRepository.save(course);
     }
 
     @Override
+    @Transactional
     public Course updateOneById(Long id, Course course) {
         Course oldCourse = this.findOneById(id);
         oldCourse.setName(course.getName());
@@ -62,8 +65,8 @@ public class CourseServiceImpl implements CourseService {
         return courseRepository.save(oldCourse);
     }
 
-
     @Override
+    @Transactional
     public void deleteOneById(Long id) {
         courseRepository.deleteById(id);
     }

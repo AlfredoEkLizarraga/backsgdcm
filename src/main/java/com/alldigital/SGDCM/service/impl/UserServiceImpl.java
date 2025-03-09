@@ -22,6 +22,7 @@ public class UserServiceImpl implements UserService {
     private IRoleRepository roleRepository;
 
     @Override
+    @Transactional
     public User saveUserWithRole(User user, String rolName) {
         Role role = roleRepository.findByName(rolName);
         if (role == null){
@@ -32,6 +33,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User updateOneById(Long id, User user) {
         User oldUser = this.findOneById(id);
         oldUser.setName(user.getName());
