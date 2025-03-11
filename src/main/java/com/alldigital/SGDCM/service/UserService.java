@@ -1,8 +1,6 @@
 package com.alldigital.SGDCM.service;
 
-import com.alldigital.SGDCM.entity.Course;
 import com.alldigital.SGDCM.entity.User;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 

@@ -1,17 +1,16 @@
 package com.alldigital.SGDCM.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "cursos")
-public class Course {
+@Table(name = "moocs")
+public class Mooc {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id_curso")
+    @Column(name = "Id_mooc")
     private Long id;
 
     @Column(name = "nombre_curso", nullable = false)

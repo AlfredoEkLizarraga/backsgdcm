@@ -1,34 +1,35 @@
 package com.alldigital.SGDCM.controller;
 
-import com.alldigital.SGDCM.entity.Course;
+import com.alldigital.SGDCM.entity.Mooc;
 import com.alldigital.SGDCM.exception.NotFoundException;
-import com.alldigital.SGDCM.service.CourseService;
+import com.alldigital.SGDCM.service.MoocService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/cursos")
-public class CourseController {
+@RequestMapping("/moocs")
+public class MoocController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CourseController.class);
+    private static final Logger logger = LoggerFactory.getLogger(MoocController.class);
 
     @Autowired
-    private CourseService courseService;
+    private MoocService moocService;
 
     @GetMapping("/lista")
-    public ResponseEntity<List<Course>> getAllCourses(){
-        var courses = courseService.findAll();
+    public ResponseEntity<List<Mooc>> getAllCourses(){
+        var courses = moocService.findAll();
         if (courses.isEmpty()){
             throw new NotFoundException("No se encontraron cursos disponibles");
         }
@@ -37,46 +38,57 @@ public class CourseController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Course>> findAllByName(@RequestParam(required = false) String name, @RequestParam String period, @RequestParam(required = false) LocalDate cutoffDate){
-        List<Course> course = null;
+    public ResponseEntity<List<Mooc>> findAllByName(@RequestParam(required = false) String name, @RequestParam String period, @RequestParam(required = false) LocalDate cutoffDate){
+        List<Mooc> mooc = null;
 
         if (StringUtils.hasText(name) && period != null && cutoffDate != null){
-            course = courseService.findAllByNameAndPeriodAndCutoffDate(name, period, cutoffDate);
-            if (course.isEmpty()){
+            mooc = moocService.findAllByNameAndPeriodAndCutoffDate(name, period, cutoffDate);
+            if (mooc.isEmpty()){
                 throw new NotFoundException("No se encontraron cursos de"+name+ " en el perido "+period);
             }
         }else if(StringUtils.hasText(name)){
-            course = courseService.findByNameContaining(name);
-            if (course.isEmpty()) {
+            mooc = moocService.findByNameContaining(name);
+            if (mooc.isEmpty()) {
                 throw new NotFoundException("No se encontraron cursos de '" + name + "'.");
             }
         } else if (period != null) {
-            course = courseService.findByPeriod(period);
-            if (course.isEmpty()) {
+            mooc = moocService.findByPeriod(period);
+            if (mooc.isEmpty()) {
                 throw new NotFoundException("No se encontraron cursos en el período '" + period + "'.");
             }
         } else if (cutoffDate != null) {
-            course = courseService.findByCutoffDate(cutoffDate);
+            mooc = moocService.findByCutoffDate(cutoffDate);
         }
-        return ResponseEntity.ok(course);
+        return ResponseEntity.ok(mooc);
+    }
+
+    @PostMapping("/upload")
+    public String handleFileUploadMooc(@RequestParam("file")MultipartFile file){
+        try {
+            moocService.processPdfMooc(file);
+            return "File uploaded successfully";
+        }catch (IOException e){
+            e.printStackTrace();
+            return "Failed to upload file";
+        }
     }
 
     @PostMapping
-    public ResponseEntity<?> createOneCourse(@RequestBody Course newCourse, HttpServletRequest request){
+    public ResponseEntity<?> createOneCourse(@RequestBody Mooc newMooc, HttpServletRequest request){
         try{
-            Course createdCourse = courseService.saveCourse(newCourse);
+            Mooc createdMooc = moocService.saveCourse(newMooc);
             String urlBase = request.getRequestURI().toString();
-            URI newLocation = URI.create(urlBase + "/" +createdCourse.getId());
-            return ResponseEntity.created(newLocation).body(createdCourse);
+            URI newLocation = URI.create(urlBase + "/" + createdMooc.getId());
+            return ResponseEntity.created(newLocation).body(createdMooc);
         }catch (NotFoundException ex){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
         }
     }
 
     @PutMapping(value = "/{id}")
-    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course course){
+    public ResponseEntity<Mooc> updateCourse(@PathVariable Long id, @RequestBody Mooc mooc){
         try {
-            Course updatedCourse = courseService.updateOneById(id, course);
+            Mooc updatedMooc = moocService.updateOneById(id, mooc);
             return ResponseEntity.ok().build();
         }catch (NotFoundException ex){
             return ResponseEntity.notFound().build();
@@ -86,7 +98,7 @@ public class CourseController {
     @DeleteMapping(value = "/{id}")
     public ResponseEntity<Void> deleteCourseById(@PathVariable Long id){
         try {
-            courseService.deleteOneById(id);
+            moocService.deleteOneById(id);
             return ResponseEntity.noContent().build();
         }catch (NotFoundException ex){
             return ResponseEntity.notFound().build();

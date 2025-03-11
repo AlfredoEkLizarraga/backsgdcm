@@ -18,7 +18,7 @@ import java.util.List;
 @RequestMapping("/usuarios")
 public class UserController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CourseController.class);
+    private static final Logger logger = LoggerFactory.getLogger(MoocController.class);
 
     @Autowired
     private UserService userService;
