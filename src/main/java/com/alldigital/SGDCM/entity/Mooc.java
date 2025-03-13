@@ -13,20 +13,20 @@ public class Mooc {
     @Column(name = "Id_mooc")
     private Long id;
 
-    @Column(name = "nombre_curso", nullable = false)
+    @Column(name = "nombre_curso")
     private String name;
 
-    @Column(name = "calificacion_min", nullable = false)
-    private int minQualification;
+    @Column(name = "horas")
+    private int hours;
 
-    @Column(name = "fecha_corte", nullable = false)
-    private LocalDate cutoffDate;
-
-    @Column(name = "periodo", nullable = false)
+    @Column(name = "periodo")
     private String period;
 
-    @Column(name = "descripcion")
-    private String description;
+    @Column(name = "perfil")
+    private String profile;
+
+    @Column(name = "codigo")
+    private String code;
 
     public Long getId() {
         return id;
@@ -44,20 +44,12 @@ public class Mooc {
         this.name = name;
     }
 
-    public int getMinQualification() {
-        return minQualification;
+    public int getHours() {
+        return hours;
     }
 
-    public void setMinQualification(int minQualification) {
-        this.minQualification = minQualification;
-    }
-
-    public LocalDate getCutoffDate() {
-        return cutoffDate;
-    }
-
-    public void setCutoffDate(LocalDate cutoffDate) {
-        this.cutoffDate = cutoffDate;
+    public void setHours(int hours) {
+        this.hours = hours;
     }
 
     public String getPeriod() {
@@ -68,11 +60,19 @@ public class Mooc {
         this.period = period;
     }
 
-    public String getDescription() {
-        return description;
+    public String getProfile() {
+        return profile;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setProfile(String profile) {
+        this.profile = profile;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 }

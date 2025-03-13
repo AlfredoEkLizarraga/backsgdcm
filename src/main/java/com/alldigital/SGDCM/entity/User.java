@@ -20,16 +20,16 @@ public class User {
     @Column(name = "apellido_mat", nullable = false)
     private String maternalSurname;
 
-    @Column(name = "correo_inst", nullable = false)
+    @Column(name = "correo_inst", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "matricula", nullable = false)
+    @Column(name = "matricula", nullable = false, unique = true)
     private String matricula;
 
     @Column(name = "telefono", nullable = false)
     private String phone;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password", nullable = false, unique = true)
     private String password;
 
     @ManyToOne(fetch = FetchType.EAGER)

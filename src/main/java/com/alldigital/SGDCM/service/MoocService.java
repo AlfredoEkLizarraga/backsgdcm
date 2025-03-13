@@ -19,9 +19,7 @@ public interface MoocService {
 
     List<Mooc> findByPeriod(String period);
 
-    List<Mooc> findByCutoffDate(LocalDate cutoffDate);
-
-    List<Mooc> findAllByNameAndPeriodAndCutoffDate(String name, String period, LocalDate cutoffDate);
+    List<Mooc> findAllByNameAndPeriod(String name, String period);
 
     Mooc saveCourse(Mooc mooc);
 

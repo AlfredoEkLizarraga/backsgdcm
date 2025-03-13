@@ -38,11 +38,11 @@ public class MoocController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Mooc>> findAllByName(@RequestParam(required = false) String name, @RequestParam String period, @RequestParam(required = false) LocalDate cutoffDate){
+    public ResponseEntity<List<Mooc>> findAllByName(@RequestParam(required = false) String name, @RequestParam String period){
         List<Mooc> mooc = null;
 
-        if (StringUtils.hasText(name) && period != null && cutoffDate != null){
-            mooc = moocService.findAllByNameAndPeriodAndCutoffDate(name, period, cutoffDate);
+        if (StringUtils.hasText(name) && period != null){
+            mooc = moocService.findAllByNameAndPeriod(name, period);
             if (mooc.isEmpty()){
                 throw new NotFoundException("No se encontraron cursos de"+name+ " en el perido "+period);
             }
@@ -56,20 +56,21 @@ public class MoocController {
             if (mooc.isEmpty()) {
                 throw new NotFoundException("No se encontraron cursos en el período '" + period + "'.");
             }
-        } else if (cutoffDate != null) {
-            mooc = moocService.findByCutoffDate(cutoffDate);
         }
         return ResponseEntity.ok(mooc);
     }
 
     @PostMapping("/upload")
-    public String handleFileUploadMooc(@RequestParam("file")MultipartFile file){
+    public ResponseEntity<String> handleFileUploadMooc(@RequestParam("file") MultipartFile file){
         try {
             moocService.processPdfMooc(file);
-            return "File uploaded successfully";
+            return ResponseEntity.ok("File uploaded and processed successfully.");
         }catch (IOException e){
-            e.printStackTrace();
-            return "Failed to upload file";
+            logger.error("Error processing the file: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file: " + e.getMessage());
+        }catch (Exception e) {
+            logger.error("Unexpected error: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred: " + e.getMessage());
         }
     }
 

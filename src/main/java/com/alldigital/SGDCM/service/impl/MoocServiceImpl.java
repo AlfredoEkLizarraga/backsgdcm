@@ -5,6 +5,8 @@ import com.alldigital.SGDCM.repository.IMoocRepository;
 import com.alldigital.SGDCM.service.MoocService;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,39 +16,100 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class MoocServiceImpl implements MoocService {
+
+    private static final Logger logger = LoggerFactory.getLogger(MoocServiceImpl.class);
 
     @Autowired
     private IMoocRepository moocRepository;
 
     @Override
     public void processPdfMooc(MultipartFile file) throws IOException {
-        PDDocument document = PDDocument.load(file.getInputStream());
-        PDFTextStripper pdfTextStripper = new PDFTextStripper();
-        String text = pdfTextStripper.getText(document);
-        document.close();
+        try {
+            logger.info("Cargando el archivo PDF...");
+            PDDocument document = PDDocument.load(file.getInputStream());
+            PDFTextStripper pdfTextStripper = new PDFTextStripper();
+            String text = pdfTextStripper.getText(document);
+            document.close();
 
-        List<Mooc> mooc = parseTextToMoocs(text);
-        moocRepository.saveAll(mooc);
+            logger.info("Contenido del PDF:\n{}", text); // Imprime el contenido del PDF
+
+            logger.info("Parseando el texto a objetos Mooc...");
+            List<Mooc> moocs = parseTextToMoocs(text);
+            logger.info("Número de moocs encontrados: {}", moocs.size());
+
+            if (!moocs.isEmpty()){
+                logger.info("Guardando los moocs en la base de datos...");
+                moocRepository.saveAll(moocs);
+                logger.info("Moocs guardados exitosamente.");
+            }else{
+                logger.warn("No se encontraron datos válidos en el PDF.");
+            }
+        } catch (Exception e) {
+            logger.error("Error al procesar el PDF: ", e);
+            throw e;
+        }
     }
 
     private List<Mooc> parseTextToMoocs(String text) {
         List<Mooc> moocs = new ArrayList<>();
         String[] lines = text.split("\n");
 
+        boolean insideTable = false;
+
         for (String line : lines) {
-            String[] parts = line.split("\\|");
-            if (parts.length > 1) {
-                Mooc mooc = new Mooc();
-                mooc.setName(parts[1].trim());
-//                mooc.setHoras(Integer.parseInt(parts[2].trim()));
-//                mooc.setPeriodo(parts[3].trim());
-//                mooc.setPerfil(parts[4].trim());
-//                mooc.setCodigo(parts[5].trim());
-                moocs.add(mooc);
+            line = line.trim();
+
+            if (line.contains("Nombre del MOOC del TecNM") && line.contains("Hrs") && line.contains("Período de Impartición") && line.contains("Perfil del Curso") && line.contains("Código del Curso")) {
+                insideTable = true; // Entramos en la tabla
+                continue; // Saltar la línea de encabezados
             }
+
+            if (insideTable && line.matches(".*\\|.*\\|.*\\|.*\\|.*")) {
+                String[] parts = line.split("\\|");
+
+                if (parts.length == 5) {
+                    try {
+                        Mooc mooc = new Mooc();
+
+                        mooc.setName(parts[0].trim());
+
+                        mooc.setHours(Integer.parseInt(parts[1].trim()));
+
+                        mooc.setPeriod(parts[2].trim());
+
+                        mooc.setProfile(parts[3].trim());
+
+                        mooc.setCode(parts[4].trim());
+
+                        moocs.add(mooc);
+
+                        logger.info("Mooc procesado:\n" +
+                                        "Nombre: {}\n" +
+                                        "Horas: {}\n" +
+                                        "Período: {}\n" +
+                                        "Perfil: {}\n" +
+                                        "Código: {}\n",
+                                mooc.getName(), mooc.getHours(), mooc.getPeriod(), mooc.getProfile(), mooc.getCode());
+                    } catch (NumberFormatException e) {
+                        logger.warn("Error al convertir horas: {}", line);
+                    }
+                }
+            }
+
+            if (line.isEmpty()) {
+                insideTable = false; // Salimos de la tabla
+            }
+        }
+
+        if (moocs.isEmpty()) {
+            logger.warn("No se encontraron datos válidos en el PDF");
+        } else {
+            logger.info("Número de moocs: {}", moocs.size());
         }
 
         return moocs;
@@ -73,13 +136,8 @@ public class MoocServiceImpl implements MoocService {
     }
 
     @Override
-    public List<Mooc> findByCutoffDate(LocalDate cutoffDate) {
-        return moocRepository.findByCutoffDate(cutoffDate);
-    }
-
-    @Override
-    public List<Mooc> findAllByNameAndPeriodAndCutoffDate(String name, String period, LocalDate cutoffDate) {
-        return moocRepository.findByNameContainingAndPeriodAndCutoffDate(name, period, cutoffDate);
+    public List<Mooc> findAllByNameAndPeriod(String name, String period) {
+        return moocRepository.findByNameContainingAndPeriod(name, period);
     }
 
     @Override
@@ -93,10 +151,10 @@ public class MoocServiceImpl implements MoocService {
     public Mooc updateOneById(Long id, Mooc mooc) {
         Mooc oldMooc = this.findOneById(id);
         oldMooc.setName(mooc.getName());
-        oldMooc.setMinQualification(mooc.getMinQualification());
-        oldMooc.setCutoffDate(mooc.getCutoffDate());
-        oldMooc.setPeriod(mooc.getPeriod());
-        oldMooc.setDescription(mooc.getDescription());
+        oldMooc.setHours(mooc.getHours());
+       oldMooc.setPeriod(mooc.getPeriod());
+       oldMooc.setProfile(mooc.getProfile());
+       oldMooc.setProfile(mooc.getProfile());
         return moocRepository.save(oldMooc);
     }
 

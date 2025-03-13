@@ -12,7 +12,7 @@ public interface IMoocRepository extends JpaRepository<Mooc, Long> {
 
     List<Mooc> findByPeriod(String period);
 
-    List<Mooc> findByCutoffDate(LocalDate cutoffDate);
+    //List<Mooc> findByCutoffDate(LocalDate cutoffDate);
 
-    List<Mooc> findByNameContainingAndPeriodAndCutoffDate(String name, String period, LocalDate cutoffDate);
+    List<Mooc> findByNameContainingAndPeriod(String name, String period);
 }
