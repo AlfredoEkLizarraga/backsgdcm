@@ -3,6 +3,8 @@ package com.alldigital.SGDCM.entity;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "moocs")
@@ -27,6 +29,9 @@ public class Mooc {
 
     @Column(name = "codigo")
     private String code;
+
+    @OneToMany(mappedBy = "mooc", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserMooc> users;
 
     public Long getId() {
         return id;
@@ -74,5 +79,13 @@ public class Mooc {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public List<UserMooc> getUsers() {
+        return users;
+    }
+
+    public void setUsers(List<UserMooc> users) {
+        this.users = users;
     }
 }

@@ -106,4 +106,10 @@ public class MoocController {
         }
     }
 
+    @PostMapping("/asignar")
+    public void assignUserToMooc(@RequestParam String matricula, @RequestParam Long idMooc){
+        System.out.println("Llamando a assignUserToMooc con matricula: " + matricula + " y idMooc: " + idMooc);
+        moocService.assignUserToMooc(matricula, idMooc);
+    }
+
 }

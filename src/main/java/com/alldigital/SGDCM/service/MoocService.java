@@ -26,4 +26,6 @@ public interface MoocService {
     Mooc updateOneById(Long id, Mooc mooc);
 
     void deleteOneById(Long id);
+
+    void assignUserToMooc(String matricula, Long idMooc);
 }

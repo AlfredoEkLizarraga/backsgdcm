@@ -2,6 +2,9 @@ package com.alldigital.SGDCM.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "usuarios")
 public class User {
@@ -35,6 +38,9 @@ public class User {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_rol")
     private Role role;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserMooc> moocs;
 
     public Long getId() {
         return id;
@@ -106,5 +112,13 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public List<UserMooc> getMoocs() {
+        return moocs;
+    }
+
+    public void setMoocs(List<UserMooc> moocs) {
+        this.moocs = moocs;
     }
 }

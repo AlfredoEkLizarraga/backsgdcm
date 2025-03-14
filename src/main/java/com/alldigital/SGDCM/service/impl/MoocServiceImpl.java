@@ -1,8 +1,14 @@
 package com.alldigital.SGDCM.service.impl;
 
 import com.alldigital.SGDCM.entity.Mooc;
+import com.alldigital.SGDCM.entity.User;
+import com.alldigital.SGDCM.entity.UserMooc;
+import com.alldigital.SGDCM.exception.NotFoundException;
 import com.alldigital.SGDCM.repository.IMoocRepository;
+import com.alldigital.SGDCM.repository.IUserMoocRepository;
+import com.alldigital.SGDCM.repository.IUserRepository;
 import com.alldigital.SGDCM.service.MoocService;
+import com.alldigital.SGDCM.service.UserService;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
@@ -27,89 +33,46 @@ public class MoocServiceImpl implements MoocService {
     @Autowired
     private IMoocRepository moocRepository;
 
+    @Autowired
+    private IUserRepository userRepository;
+
+    @Autowired
+    private IUserMoocRepository userMoocRepository;
+
     @Override
+    @Transactional
     public void processPdfMooc(MultipartFile file) throws IOException {
-        try {
-            logger.info("Cargando el archivo PDF...");
-            PDDocument document = PDDocument.load(file.getInputStream());
-            PDFTextStripper pdfTextStripper = new PDFTextStripper();
-            String text = pdfTextStripper.getText(document);
-            document.close();
+        logger.info("Iniciando procesamiento del PDF...");
 
-            logger.info("Contenido del PDF:\n{}", text); // Imprime el contenido del PDF
+        PDDocument document = PDDocument.load(file.getInputStream());
+        PDFTextStripper pdfStripper = new PDFTextStripper();
+        String text = pdfStripper.getText(document);
+        document.close();
 
-            logger.info("Parseando el texto a objetos Mooc...");
-            List<Mooc> moocs = parseTextToMoocs(text);
-            logger.info("Número de moocs encontrados: {}", moocs.size());
+        logger.info("Contenido del PDF: {}", text);
 
-            if (!moocs.isEmpty()){
-                logger.info("Guardando los moocs en la base de datos...");
-                moocRepository.saveAll(moocs);
-                logger.info("Moocs guardados exitosamente.");
-            }else{
-                logger.warn("No se encontraron datos válidos en el PDF.");
-            }
-        } catch (Exception e) {
-            logger.error("Error al procesar el PDF: ", e);
-            throw e;
-        }
+        List<Mooc> moocs = parseTextToMoocs(text);
+        logger.info("Número de MOOCs procesados: {}", moocs.size());
+
+        moocRepository.saveAll(moocs);
+        logger.info("Datos guardados en la base de datos.");
     }
 
     private List<Mooc> parseTextToMoocs(String text) {
         List<Mooc> moocs = new ArrayList<>();
         String[] lines = text.split("\n");
 
-        boolean insideTable = false;
-
         for (String line : lines) {
-            line = line.trim();
-
-            if (line.contains("Nombre del MOOC del TecNM") && line.contains("Hrs") && line.contains("Período de Impartición") && line.contains("Perfil del Curso") && line.contains("Código del Curso")) {
-                insideTable = true; // Entramos en la tabla
-                continue; // Saltar la línea de encabezados
+            String[] parts = line.split("\\|");
+            if (parts.length > 1) {
+                Mooc mooc = new Mooc();
+                mooc.setName(parts[1].trim());
+                mooc.setHours(Integer.parseInt(parts[2].trim()));
+                mooc.setPeriod(parts[3].trim());
+                mooc.setProfile(parts[4].trim());
+                mooc.setCode(parts[5].trim());
+                moocs.add(mooc);
             }
-
-            if (insideTable && line.matches(".*\\|.*\\|.*\\|.*\\|.*")) {
-                String[] parts = line.split("\\|");
-
-                if (parts.length == 5) {
-                    try {
-                        Mooc mooc = new Mooc();
-
-                        mooc.setName(parts[0].trim());
-
-                        mooc.setHours(Integer.parseInt(parts[1].trim()));
-
-                        mooc.setPeriod(parts[2].trim());
-
-                        mooc.setProfile(parts[3].trim());
-
-                        mooc.setCode(parts[4].trim());
-
-                        moocs.add(mooc);
-
-                        logger.info("Mooc procesado:\n" +
-                                        "Nombre: {}\n" +
-                                        "Horas: {}\n" +
-                                        "Período: {}\n" +
-                                        "Perfil: {}\n" +
-                                        "Código: {}\n",
-                                mooc.getName(), mooc.getHours(), mooc.getPeriod(), mooc.getProfile(), mooc.getCode());
-                    } catch (NumberFormatException e) {
-                        logger.warn("Error al convertir horas: {}", line);
-                    }
-                }
-            }
-
-            if (line.isEmpty()) {
-                insideTable = false; // Salimos de la tabla
-            }
-        }
-
-        if (moocs.isEmpty()) {
-            logger.warn("No se encontraron datos válidos en el PDF");
-        } else {
-            logger.info("Número de moocs: {}", moocs.size());
         }
 
         return moocs;
@@ -162,5 +125,26 @@ public class MoocServiceImpl implements MoocService {
     @Transactional
     public void deleteOneById(Long id) {
         moocRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void assignUserToMooc(String matricula, Long idMooc) {
+        User user = userRepository.findByMatricula(matricula)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado con matrícula: " + matricula));
+        Mooc mooc = moocRepository.findById(idMooc)
+                .orElseThrow(() -> new NotFoundException("Curso no encontrado con id: " + idMooc));
+
+        boolean existsRelation = userMoocRepository.existsByUserAndMooc(user, mooc);
+
+        if (!existsRelation){
+            UserMooc userMooc = new UserMooc();
+            userMooc.setUser(user);
+            userMooc.setMooc(mooc);
+
+            userMoocRepository.save(userMooc);
+        }else {
+            throw new NotFoundException("El usuario ya esta asignado al curso");
+        }
     }
 }
