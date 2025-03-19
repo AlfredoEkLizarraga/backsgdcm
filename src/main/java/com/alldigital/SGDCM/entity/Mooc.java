@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+
 @Entity
 @Table(name = "moocs")
+
 public class Mooc {
 
     @Id
@@ -17,7 +19,7 @@ public class Mooc {
     private String name;
 
     @Column(name = "horas")
-    private int hours;
+    private Integer hours;
 
     @Column(name = "periodo")
     private String period;

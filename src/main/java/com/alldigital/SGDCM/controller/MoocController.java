@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
@@ -38,7 +37,9 @@ public class MoocController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Mooc>> findAllByName(@RequestParam(required = false) String name, @RequestParam String period){
+    public ResponseEntity<List<Mooc>> findAllByName(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String period){ //al periodo le agregamos un required
         List<Mooc> mooc = null;
 
         if (StringUtils.hasText(name) && period != null){
@@ -46,6 +47,7 @@ public class MoocController {
             if (mooc.isEmpty()){
                 throw new NotFoundException("No se encontraron cursos de"+name+ " en el perido "+period);
             }
+
         }else if(StringUtils.hasText(name)){
             mooc = moocService.findByNameContaining(name);
             if (mooc.isEmpty()) {
@@ -62,9 +64,14 @@ public class MoocController {
 
     @PostMapping("/upload")
     public ResponseEntity<String> handleFileUploadMooc(@RequestParam("file") MultipartFile file){
+        //validar que el archivo sea un PDF
+        if (!file.getContentType().equals("application/pdf")) {
+            return ResponseEntity.badRequest().body("Solo se permiten archivos PDF.");
+        }
+
         try {
             moocService.processPdfMooc(file);
-            return ResponseEntity.ok("File uploaded and processed successfully.");
+            return ResponseEntity.ok("File uploaded and processed successfully. =)");
         }catch (IOException e){
             logger.error("Error processing the file: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload file: " + e.getMessage());
