@@ -1,10 +1,20 @@
 package com.alldigital.SGDCM.service.impl;
 
 import com.alldigital.SGDCM.entity.Mooc;
+import com.alldigital.SGDCM.entity.User;
+import com.alldigital.SGDCM.entity.UserMooc;
+import com.alldigital.SGDCM.exception.NotFoundException;
 import com.alldigital.SGDCM.repository.IMoocRepository;
+import com.alldigital.SGDCM.repository.IUserMoocRepository;
+import com.alldigital.SGDCM.repository.IUserRepository;
 import com.alldigital.SGDCM.service.MoocService;
+import com.alldigital.SGDCM.service.UserService;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +26,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,17 +38,25 @@ public class MoocServiceImpl implements MoocService {
     @Autowired
     private IMoocRepository moocRepository;
 
-    @Override
+    @Autowired
+    private IUserRepository userRepository;
+
+    @Autowired
+    private IUserMoocRepository userMoocRepository;
+
+    /*Metodo para procesar un archivo PDF */
     public void processPdfMooc(MultipartFile file) throws IOException {
         try {
             logger.info("Cargando el archivo PDF...");
             PDDocument document = PDDocument.load(file.getInputStream());
+            // Crear un objeto PDFTextStripper para extraer el texto
             PDFTextStripper pdfTextStripper = new PDFTextStripper();
             String text = pdfTextStripper.getText(document);
+
+            //cerrar el documento
             document.close();
 
             logger.info("Contenido del PDF:\n{}", text); // Imprime el contenido del PDF
-
             logger.info("Parseando el texto a objetos Mooc...");
             List<Mooc> moocs = parseTextToMoocs(text);
             logger.info("Número de moocs encontrados: {}", moocs.size());
@@ -47,7 +66,7 @@ public class MoocServiceImpl implements MoocService {
                 moocRepository.saveAll(moocs);
                 logger.info("Moocs guardados exitosamente.");
             }else{
-                logger.warn("No se encontraron datos válidos en el PDF.");
+                logger.warn("No se encontraron datos válidos en el PDF =(");
             }
         } catch (Exception e) {
             logger.error("Error al procesar el PDF: ", e);
@@ -55,64 +74,90 @@ public class MoocServiceImpl implements MoocService {
         }
     }
 
+    // metodo para agregar la información del PDF a una Tabla de la BD
     private List<Mooc> parseTextToMoocs(String text) {
+        logger.info("Iniciando parseTextToMoocs...");
         List<Mooc> moocs = new ArrayList<>();
         String[] lines = text.split("\n");
 
         boolean insideTable = false;
+        boolean headerProcessed = false;
+        StringBuilder buffer = new StringBuilder();
+        Pattern codePattern = Pattern.compile("TNM-M\\d+\\.\\d+-MOOC-\\d{4}-\\d{2}"); //detectar el patron de codigos
 
+
+        // recorrer linea por linea el texto del pdf
         for (String line : lines) {
-            line = line.trim();
+            line = line.trim(); // ELIMINA ESPACIOS AL INICIO Y AL FINAL
+            logger.debug("Línea actual: {}", line);
 
-            if (line.contains("Nombre del MOOC del TecNM") && line.contains("Hrs") && line.contains("Período de Impartición") && line.contains("Perfil del Curso") && line.contains("Código del Curso")) {
-                insideTable = true; // Entramos en la tabla
-                continue; // Saltar la línea de encabezados
+            // Filtrar líneas irrelevantes
+            if (line.contains("Av. Universidad") || line.contains("www.tecnm.mx") || line.contains("Tel.") || line.contains("e-mail:") || line.isEmpty()) {
+                logger.debug("Línea filtrada: {}", line);
+                continue; // Ignorar estas líneas
             }
 
-            if (insideTable && line.matches(".*\\|.*\\|.*\\|.*\\|.*")) {
-                String[] parts = line.split("\\|");
+            // Detectar el inicio de la tabla
+            if (line.contains("Nombre del MOOC del")) {
+                insideTable = true;
+                logger.info("Inicio de tabla detectado :{}",line);
+                continue;
+            }
 
-                if (parts.length == 5) {
-                    try {
-                        Mooc mooc = new Mooc();
+            // saltar los titulos de las filas
+            if(line.contains("TecNM") || line.contains("Hrs") || line.contains("Periodo de") || line.contains("Impartición") || line.contains("Perfil del Curso") || line.contains("Codigo del curso")){
+                continue;
+            }
 
-                        mooc.setName(parts[0].trim());
-
-                        mooc.setHours(Integer.parseInt(parts[1].trim()));
-
-                        mooc.setPeriod(parts[2].trim());
-
-                        mooc.setProfile(parts[3].trim());
-
-                        mooc.setCode(parts[4].trim());
-
-                        moocs.add(mooc);
-
-                        logger.info("Mooc procesado:\n" +
-                                        "Nombre: {}\n" +
-                                        "Horas: {}\n" +
-                                        "Período: {}\n" +
-                                        "Perfil: {}\n" +
-                                        "Código: {}\n",
-                                mooc.getName(), mooc.getHours(), mooc.getPeriod(), mooc.getProfile(), mooc.getCode());
-                    } catch (NumberFormatException e) {
-                        logger.warn("Error al convertir horas: {}", line);
-                    }
+            // Manejar líneas dentro de la tabla
+            if (insideTable) {
+                buffer.append(line).append(" ");
+                logger.debug("Procesando línea dentro de la tabla: {}", line);
+                //verificar si la linea actual contiene el codigo de curso
+                Matcher matcher  = codePattern.matcher(line);
+                if (matcher.find()){
+                    //procesar el buffer acumulado
+                    processBuffer(buffer.toString(), moocs);
+                    buffer.setLength(0); // Reiniciar buffer
                 }
-            }
 
-            if (line.isEmpty()) {
-                insideTable = false; // Salimos de la tabla
             }
         }
 
-        if (moocs.isEmpty()) {
-            logger.warn("No se encontraron datos válidos en el PDF");
-        } else {
-            logger.info("Número de moocs: {}", moocs.size());
+        // Procesar el último buffer si queda contenido
+        if (buffer.length() > 0) {
+            logger.debug("Procesando último buffer: {}", buffer);
+            processBuffer(buffer.toString(), moocs);
         }
 
+        logger.info("Total de moocs procesados: {}", moocs.size());
         return moocs;
+    }
+
+    //metodo para almacenar datos en memoria (de manera temporal)
+    private void processBuffer(String bufferline, List<Mooc> moocs) {
+
+        // Patrón para capturar: Nombre, Horas, Periodo, Perfil, Código
+        Pattern pattern = Pattern.compile("(.+?)\\s+(\\d+)\\s+(E-J\\s+\\d{4})\\s+(Actualización\\s+Profesional|Formación\\s+Docente|.+?)\\s+(TNM-M\\d+\\.\\d+-MOOC-\\d{4}-\\d{2})");
+        Matcher matcher = pattern.matcher(bufferline);
+
+        if (matcher.find()){
+            try{
+                Mooc mooc = new Mooc();
+                mooc.setName(matcher.group(1).trim());
+                mooc.setHours(Integer.parseInt(matcher.group(2).trim()));
+                mooc.setPeriod(matcher.group(3).trim());
+                mooc.setProfile(matcher.group(4).trim());
+                mooc.setCode(matcher.group(5).trim());
+                moocs.add(mooc);// agregar los datos
+                logger.info("Mooc procesado: {}", mooc);
+            } catch (Exception e) {
+                logger.error("Error al procesar línea: {}", bufferline, e);
+            }
+        }
+        else{
+            logger.warn("linea no valida {}",bufferline);
+        }
     }
 
     @Override
@@ -126,7 +171,7 @@ public class MoocServiceImpl implements MoocService {
     }
 
     @Override
-    public List<Mooc> findByNameContaining(String name) {
+    public Optional<Mooc> findByNameContaining(String name) {
         return moocRepository.findByNameContaining(name);
     }
 
@@ -152,9 +197,9 @@ public class MoocServiceImpl implements MoocService {
         Mooc oldMooc = this.findOneById(id);
         oldMooc.setName(mooc.getName());
         oldMooc.setHours(mooc.getHours());
-       oldMooc.setPeriod(mooc.getPeriod());
-       oldMooc.setProfile(mooc.getProfile());
-       oldMooc.setProfile(mooc.getProfile());
+        oldMooc.setPeriod(mooc.getPeriod());
+        oldMooc.setProfile(mooc.getProfile());
+        oldMooc.setProfile(mooc.getProfile());
         return moocRepository.save(oldMooc);
     }
 
@@ -162,5 +207,26 @@ public class MoocServiceImpl implements MoocService {
     @Transactional
     public void deleteOneById(Long id) {
         moocRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void assignUserToMooc(String matricula, Long idMooc) {
+        User user = userRepository.findByMatricula(matricula)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado con matrícula: " + matricula));
+        Mooc mooc = moocRepository.findById(idMooc)
+                .orElseThrow(() -> new NotFoundException("Curso no encontrado con id: " + idMooc));
+
+        boolean existsRelation = userMoocRepository.existsByUserAndMooc(user, mooc);
+
+        if (!existsRelation){
+            UserMooc userMooc = new UserMooc();
+            userMooc.setUser(user);
+            userMooc.setMooc(mooc);
+
+            userMoocRepository.save(userMooc);
+        }else {
+            throw new NotFoundException("El usuario ya esta asignado al curso");
+        }
     }
 }
