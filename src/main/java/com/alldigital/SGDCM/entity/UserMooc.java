@@ -2,6 +2,9 @@ package com.alldigital.SGDCM.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "usuarioMooc", uniqueConstraints = {@UniqueConstraint(columnNames = {"id_usuario", "id_mooc"})})
 public class UserMooc {
@@ -18,6 +21,9 @@ public class UserMooc {
     @ManyToOne
     @JoinColumn(name = "id_mooc", nullable = false)
     private Mooc mooc;
+
+    @OneToMany(mappedBy = "usuarioMooc", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Performance> performances = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -41,5 +47,13 @@ public class UserMooc {
 
     public void setMooc(Mooc mooc) {
         this.mooc = mooc;
+    }
+
+    public List<Performance> getPerformances() {
+        return performances;
+    }
+
+    public void setPerformances(List<Performance> performances) {
+        this.performances = performances;
     }
 }

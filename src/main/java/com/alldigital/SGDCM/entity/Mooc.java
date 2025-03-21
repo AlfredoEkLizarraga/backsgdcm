@@ -1,5 +1,6 @@
 package com.alldigital.SGDCM.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -31,6 +32,7 @@ public class Mooc {
     private String code;
 
     @OneToMany(mappedBy = "mooc", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<UserMooc> users;
 
     public Long getId() {

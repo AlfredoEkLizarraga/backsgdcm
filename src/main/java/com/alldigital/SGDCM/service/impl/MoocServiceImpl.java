@@ -9,8 +9,12 @@ import com.alldigital.SGDCM.repository.IUserMoocRepository;
 import com.alldigital.SGDCM.repository.IUserRepository;
 import com.alldigital.SGDCM.service.MoocService;
 import com.alldigital.SGDCM.service.UserService;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +26,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,43 +44,120 @@ public class MoocServiceImpl implements MoocService {
     @Autowired
     private IUserMoocRepository userMoocRepository;
 
-    @Override
-    @Transactional
+    /*Metodo para procesar un archivo PDF */
     public void processPdfMooc(MultipartFile file) throws IOException {
-        logger.info("Iniciando procesamiento del PDF...");
+        try {
+            logger.info("Cargando el archivo PDF...");
+            PDDocument document = PDDocument.load(file.getInputStream());
+            // Crear un objeto PDFTextStripper para extraer el texto
+            PDFTextStripper pdfTextStripper = new PDFTextStripper();
+            String text = pdfTextStripper.getText(document);
 
-        PDDocument document = PDDocument.load(file.getInputStream());
-        PDFTextStripper pdfStripper = new PDFTextStripper();
-        String text = pdfStripper.getText(document);
-        document.close();
+            //cerrar el documento
+            document.close();
 
-        logger.info("Contenido del PDF: {}", text);
+            logger.info("Contenido del PDF:\n{}", text); // Imprime el contenido del PDF
+            logger.info("Parseando el texto a objetos Mooc...");
+            List<Mooc> moocs = parseTextToMoocs(text);
+            logger.info("Número de moocs encontrados: {}", moocs.size());
 
-        List<Mooc> moocs = parseTextToMoocs(text);
-        logger.info("Número de MOOCs procesados: {}", moocs.size());
-
-        moocRepository.saveAll(moocs);
-        logger.info("Datos guardados en la base de datos.");
+            if (!moocs.isEmpty()){
+                logger.info("Guardando los moocs en la base de datos...");
+                moocRepository.saveAll(moocs);
+                logger.info("Moocs guardados exitosamente.");
+            }else{
+                logger.warn("No se encontraron datos válidos en el PDF =(");
+            }
+        } catch (Exception e) {
+            logger.error("Error al procesar el PDF: ", e);
+            throw e;
+        }
     }
 
+    // metodo para agregar la información del PDF a una Tabla de la BD
     private List<Mooc> parseTextToMoocs(String text) {
+        logger.info("Iniciando parseTextToMoocs...");
         List<Mooc> moocs = new ArrayList<>();
         String[] lines = text.split("\n");
 
+        boolean insideTable = false;
+        boolean headerProcessed = false;
+        StringBuilder buffer = new StringBuilder();
+        Pattern codePattern = Pattern.compile("TNM-M\\d+\\.\\d+-MOOC-\\d{4}-\\d{2}"); //detectar el patron de codigos
+
+
+        // recorrer linea por linea el texto del pdf
         for (String line : lines) {
-            String[] parts = line.split("\\|");
-            if (parts.length > 1) {
-                Mooc mooc = new Mooc();
-                mooc.setName(parts[1].trim());
-                mooc.setHours(Integer.parseInt(parts[2].trim()));
-                mooc.setPeriod(parts[3].trim());
-                mooc.setProfile(parts[4].trim());
-                mooc.setCode(parts[5].trim());
-                moocs.add(mooc);
+            line = line.trim(); // ELIMINA ESPACIOS AL INICIO Y AL FINAL
+            logger.debug("Línea actual: {}", line);
+
+            // Filtrar líneas irrelevantes
+            if (line.contains("Av. Universidad") || line.contains("www.tecnm.mx") || line.contains("Tel.") || line.contains("e-mail:") || line.isEmpty()) {
+                logger.debug("Línea filtrada: {}", line);
+                continue; // Ignorar estas líneas
+            }
+
+            // Detectar el inicio de la tabla
+            if (line.contains("Nombre del MOOC del")) {
+                insideTable = true;
+                logger.info("Inicio de tabla detectado :{}",line);
+                continue;
+            }
+
+            // saltar los titulos de las filas
+            if(line.contains("TecNM") || line.contains("Hrs") || line.contains("Periodo de") || line.contains("Impartición") || line.contains("Perfil del Curso") || line.contains("Codigo del curso")){
+                continue;
+            }
+
+            // Manejar líneas dentro de la tabla
+            if (insideTable) {
+                buffer.append(line).append(" ");
+                logger.debug("Procesando línea dentro de la tabla: {}", line);
+                //verificar si la linea actual contiene el codigo de curso
+                Matcher matcher  = codePattern.matcher(line);
+                if (matcher.find()){
+                    //procesar el buffer acumulado
+                    processBuffer(buffer.toString(), moocs);
+                    buffer.setLength(0); // Reiniciar buffer
+                }
+
             }
         }
 
+        // Procesar el último buffer si queda contenido
+        if (buffer.length() > 0) {
+            logger.debug("Procesando último buffer: {}", buffer);
+            processBuffer(buffer.toString(), moocs);
+        }
+
+        logger.info("Total de moocs procesados: {}", moocs.size());
         return moocs;
+    }
+
+    //metodo para almacenar datos en memoria (de manera temporal)
+    private void processBuffer(String bufferline, List<Mooc> moocs) {
+
+        // Patrón para capturar: Nombre, Horas, Periodo, Perfil, Código
+        Pattern pattern = Pattern.compile("(.+?)\\s+(\\d+)\\s+(E-J\\s+\\d{4})\\s+(Actualización\\s+Profesional|Formación\\s+Docente|.+?)\\s+(TNM-M\\d+\\.\\d+-MOOC-\\d{4}-\\d{2})");
+        Matcher matcher = pattern.matcher(bufferline);
+
+        if (matcher.find()){
+            try{
+                Mooc mooc = new Mooc();
+                mooc.setName(matcher.group(1).trim());
+                mooc.setHours(Integer.parseInt(matcher.group(2).trim()));
+                mooc.setPeriod(matcher.group(3).trim());
+                mooc.setProfile(matcher.group(4).trim());
+                mooc.setCode(matcher.group(5).trim());
+                moocs.add(mooc);// agregar los datos
+                logger.info("Mooc procesado: {}", mooc);
+            } catch (Exception e) {
+                logger.error("Error al procesar línea: {}", bufferline, e);
+            }
+        }
+        else{
+            logger.warn("linea no valida {}",bufferline);
+        }
     }
 
     @Override
@@ -89,7 +171,7 @@ public class MoocServiceImpl implements MoocService {
     }
 
     @Override
-    public List<Mooc> findByNameContaining(String name) {
+    public Optional<Mooc> findByNameContaining(String name) {
         return moocRepository.findByNameContaining(name);
     }
 

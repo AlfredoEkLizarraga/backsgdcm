@@ -16,7 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/moocs")
@@ -47,10 +49,9 @@ public class MoocController {
                 throw new NotFoundException("No se encontraron cursos de"+name+ " en el perido "+period);
             }
         }else if(StringUtils.hasText(name)){
-            mooc = moocService.findByNameContaining(name);
-            if (mooc.isEmpty()) {
-                throw new NotFoundException("No se encontraron cursos de '" + name + "'.");
-            }
+            Mooc moocResult = moocService.findByNameContaining(name)
+                    .orElseThrow(() -> new NotFoundException("No se encontraron cursos de '" + name + "'."));
+            mooc = Collections.singletonList(moocResult);
         } else if (period != null) {
             mooc = moocService.findByPeriod(period);
             if (mooc.isEmpty()) {
