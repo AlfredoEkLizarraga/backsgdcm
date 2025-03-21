@@ -15,7 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/moocs")
@@ -49,10 +51,9 @@ public class MoocController {
             }
 
         }else if(StringUtils.hasText(name)){
-            mooc = moocService.findByNameContaining(name);
-            if (mooc.isEmpty()) {
-                throw new NotFoundException("No se encontraron cursos de '" + name + "'.");
-            }
+            Mooc moocResult = moocService.findByNameContaining(name)
+                    .orElseThrow(() -> new NotFoundException("No se encontraron cursos de '" + name + "'."));
+            mooc = Collections.singletonList(moocResult);
         } else if (period != null) {
             mooc = moocService.findByPeriod(period);
             if (mooc.isEmpty()) {
@@ -111,6 +112,12 @@ public class MoocController {
         }catch (NotFoundException ex){
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @PostMapping("/asignar")
+    public void assignUserToMooc(@RequestParam String matricula, @RequestParam Long idMooc){
+        System.out.println("Llamando a assignUserToMooc con matricula: " + matricula + " y idMooc: " + idMooc);
+        moocService.assignUserToMooc(matricula, idMooc);
     }
 
 }

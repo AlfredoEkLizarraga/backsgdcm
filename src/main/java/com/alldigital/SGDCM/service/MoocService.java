@@ -6,6 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface MoocService {
 
@@ -15,7 +16,7 @@ public interface MoocService {
 
     List<Mooc> findAll();
 
-    List<Mooc> findByNameContaining(String name);
+    Optional<Mooc> findByNameContaining(String name);
 
     List<Mooc> findByPeriod(String period);
 
@@ -26,4 +27,6 @@ public interface MoocService {
     Mooc updateOneById(Long id, Mooc mooc);
 
     void deleteOneById(Long id);
+
+    void assignUserToMooc(String matricula, Long idMooc);
 }
