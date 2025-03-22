@@ -17,5 +17,5 @@ public interface IMoocRepository extends JpaRepository<Mooc, Long> {
 
     List<Mooc> findByNameContainingAndPeriod(String name, String period);
 
-    Optional<Mooc> findByNameContainingIgnoreCase(String name);
+    Optional<Mooc> findByNameIgnoreCase(String name);
 }

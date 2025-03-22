@@ -1,5 +1,6 @@
 package com.alldigital.SGDCM.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class User {
     @JoinColumn(name = "id_rol")
     private Role role;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserMooc> moocs;
 

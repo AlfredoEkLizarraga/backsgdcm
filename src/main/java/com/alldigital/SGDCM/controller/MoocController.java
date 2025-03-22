@@ -108,9 +108,14 @@ public class MoocController {
     }
 
     @PostMapping("/asignar")
-    public void assignUserToMooc(@RequestParam String matricula, @RequestParam Long idMooc){
-        System.out.println("Llamando a assignUserToMooc con matricula: " + matricula + " y idMooc: " + idMooc);
-        moocService.assignUserToMooc(matricula, idMooc);
+    public ResponseEntity<String> assignUserToMooc(@RequestParam String matricula, @RequestParam Long idMooc){
+        try {
+            System.out.println("Llamando a assignUserToMooc con matricula: " + matricula + " y idMooc: " + idMooc);
+            moocService.assignUserToMooc(matricula, idMooc);
+            return ResponseEntity.ok("Usuario asignado correctamente");
+        }catch (NotFoundException ex){
+            return ResponseEntity.status(400).body(ex.getMessage());
+        }
     }
 
 }

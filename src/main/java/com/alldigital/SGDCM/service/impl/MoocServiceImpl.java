@@ -44,6 +44,8 @@ public class MoocServiceImpl implements MoocService {
     @Autowired
     private IUserMoocRepository userMoocRepository;
 
+    @Override
+    @Transactional
     /*Metodo para procesar un archivo PDF */
     public void processPdfMooc(MultipartFile file) throws IOException {
         try {
@@ -101,11 +103,6 @@ public class MoocServiceImpl implements MoocService {
             if (line.contains("Nombre del MOOC del")) {
                 insideTable = true;
                 logger.info("Inicio de tabla detectado :{}",line);
-                continue;
-            }
-
-            // saltar los titulos de las filas
-            if(line.contains("TecNM") || line.contains("Hrs") || line.contains("Periodo de") || line.contains("Impartición") || line.contains("Perfil del Curso") || line.contains("Codigo del curso")){
                 continue;
             }
 

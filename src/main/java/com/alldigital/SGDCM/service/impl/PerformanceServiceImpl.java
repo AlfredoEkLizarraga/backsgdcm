@@ -54,25 +54,25 @@ public class PerformanceServiceImpl implements PerformanceService {
         Iterator<Row> rowIterator = sheet.iterator();
 
         // Obtener el nombre del curso desde la segunda fila (fila 2, índice 1)
-        Row nameMoocRow = sheet.getRow(1); // Segunda fila (fila 2)
-        if (nameMoocRow == null) {
+        Row moocNameRow = sheet.getRow(1); // Segunda fila (fila 2)
+        if (moocNameRow == null) {
             System.out.println("La fila del nombre del curso está vacía. Saltando esta hoja.");
-            return; // Salir del método si no hay fila
+            return;
         }
 
-        Cell nombreCursoCell = nameMoocRow.getCell(0); // Primera columna (columna 0)
-        if (nombreCursoCell == null) {
+        Cell moocNameCell = moocNameRow.getCell(0); // Primera columna (columna 0)
+        if (moocNameCell == null) {
             System.out.println("La celda del nombre del curso está vacía. Saltando esta hoja.");
-            return; // Salir del método si no hay celda
+            return;
         }
 
-        String fullName = nombreCursoCell.getStringCellValue();
+        String fullName = moocNameCell.getStringCellValue();
         String name = fullName.split("\\d{4}-\\d")[0].trim();
 
         // Obtener la fecha de corte
         String cutoffDateStr = getCourtDate(sheet);
 
-        Optional<Mooc> moocOptional = moocRepository.findByNameContainingIgnoreCase(name.trim());
+        Optional<Mooc> moocOptional = moocRepository.findByNameIgnoreCase(name.trim());
 
         // Si no se encuentra el MOOC, continuar con el siguiente curso
         if (!moocOptional.isPresent()) {
@@ -82,20 +82,20 @@ public class PerformanceServiceImpl implements PerformanceService {
         Mooc mooc = moocOptional.get();
 
         // Parsear la fecha de corte
-        Date fechaCorte = parseCutoffDate(cutoffDateStr);
+        Date cutoffDate = parseCutoffDate(cutoffDateStr);
 
-        // Verificar si ya existe una fecha de corte para este MOOC
         Optional<CutoffDate> existingCutoffDate = cutoffDateRepository.findByMoooc_Id(mooc.getId());
-        if (!existingCutoffDate.isPresent()) {
-            // Guardar la fecha de corte solo si no existe
-            CutoffDate fechaCorteEntity = new CutoffDate();
-            fechaCorteEntity.setMoooc(mooc); // Asignar el MOOC correcto
-            fechaCorteEntity.setCutoffDate(fechaCorte);
-            cutoffDateRepository.save(fechaCorteEntity);
-            System.out.println("Fecha de corte guardada para el MOOC: " + mooc.getId());
-        } else {
-            System.out.println("Ya existe una fecha de corte para el MOOC: " + mooc.getId());
+        if (existingCutoffDate.isPresent()) {
+            System.out.println("Ya existe una fecha de corte para el MOOC: " + mooc.getId() + ".");
+            throw new NotFoundException("Ya existe una fecha de corte para el MOOC: " + mooc.getId() + ".");
         }
+
+        // Guardar la fecha de corte solo si no existe
+        CutoffDate cutoffDateEntity = new CutoffDate();
+        cutoffDateEntity.setMoooc(mooc); // Asignar el MOOC correcto
+        cutoffDateEntity.setCutoffDate(cutoffDate);
+        cutoffDateRepository.save(cutoffDateEntity);
+        System.out.println("Fecha de corte guardada para el MOOC: " + mooc.getId());
 
         // Saltar las filas de encabezado (primera fila es la fecha de corte, segunda fila es el nombre del curso, tercera fila es el encabezado de la tabla)
         if (rowIterator.hasNext()) {
@@ -109,7 +109,7 @@ public class PerformanceServiceImpl implements PerformanceService {
         }
 
         // Determinar el tipo de hoja (si tiene columnas separadas para matrícula y dominio)
-        boolean tieneColumnasSeparadas = sheet.getRow(3).getPhysicalNumberOfCells() > 3;
+        boolean hasSeparateColumns = sheet.getRow(3).getPhysicalNumberOfCells() > 3;
 
         // Procesar las filas restantes
         while (rowIterator.hasNext()) {
@@ -117,45 +117,45 @@ public class PerformanceServiceImpl implements PerformanceService {
 
             try {
                 // Obtener los valores de las celdas
-                Cell correoCell = row.getCell(0);
-                Cell calificacionCell = tieneColumnasSeparadas ? row.getCell(3) : row.getCell(1);
-                Cell cursoConcluidoCell = tieneColumnasSeparadas ? row.getCell(4) : row.getCell(2);
+                Cell emailCell = row.getCell(0);
+                Cell qualificationCell = hasSeparateColumns ? row.getCell(3) : row.getCell(1);
+                Cell courseCompletedCell = hasSeparateColumns ? row.getCell(4) : row.getCell(2);
 
                 // Verificar si las celdas están vacías o no son del tipo esperado
-                if (correoCell == null || calificacionCell == null || cursoConcluidoCell == null) {
+                if (emailCell == null || qualificationCell == null || courseCompletedCell == null) {
                     System.out.println("Una o más celdas están vacías en la fila " + row.getRowNum() + ". Saltando esta fila.");
                     continue;
                 }
 
-                String correo = correoCell.getStringCellValue();
+                String email = emailCell.getStringCellValue();
 
-                if (!correo.endsWith("@merida.tecnm.mx")) {
-                    System.out.println("El correo " + correo + " no es de Mérida. Saltando esta fila.");
+                if (!email.endsWith("@merida.tecnm.mx")) {
+                    System.out.println("El correo " + email + " no es de Mérida. Saltando esta fila.");
                     continue;
                 }
 
                 // Manejar el caso en que la celda de calificación sea de tipo STRING
-                int calificacion;
-                if (calificacionCell.getCellType() == CellType.STRING) {
+                int qualification;
+                if (qualificationCell.getCellType() == CellType.STRING) {
                     try {
-                        calificacion = Integer.parseInt(calificacionCell.getStringCellValue());
+                        qualification = Integer.parseInt(qualificationCell.getStringCellValue());
                     } catch (NumberFormatException e) {
                         System.out.println("La calificación en la fila " + row.getRowNum() + " no es un número válido. Saltando esta fila.");
                         continue;
                     }
-                } else if (calificacionCell.getCellType() == CellType.NUMERIC) {
-                    calificacion = (int) calificacionCell.getNumericCellValue();
+                } else if (qualificationCell.getCellType() == CellType.NUMERIC) {
+                    qualification = (int) qualificationCell.getNumericCellValue();
                 } else {
                     System.out.println("Tipo de celda no soportado para la calificación en la fila " + row.getRowNum() + ". Saltando esta fila.");
                     continue;
                 }
 
-                String cursoConcluido = cursoConcluidoCell.getStringCellValue();
+                String courseCompleted = courseCompletedCell.getStringCellValue();
 
                 // Obtener matrícula y dominio según el tipo de hoja
                 String matricula;
-                String dominio;
-                if (tieneColumnasSeparadas) {
+                String domain;
+                if (hasSeparateColumns) {
                     Cell matriculaCell = row.getCell(1);
                     Cell dominioCell = row.getCell(2);
                     if (matriculaCell == null || dominioCell == null) {
@@ -163,11 +163,11 @@ public class PerformanceServiceImpl implements PerformanceService {
                         continue;
                     }
                     matricula = matriculaCell.getStringCellValue();
-                    dominio = dominioCell.getStringCellValue();
+                    domain = dominioCell.getStringCellValue();
                 } else {
-                    String[] partesCorreo = correo.split("@");
-                    matricula = partesCorreo[0];
-                    dominio = partesCorreo[1];
+                    String[] mailParts = email.split("@");
+                    matricula = mailParts[0];
+                    domain = mailParts[1];
                 }
 
                 // Buscar el usuario por matrícula
@@ -183,27 +183,27 @@ public class PerformanceServiceImpl implements PerformanceService {
                 Optional<UserMooc> userMooc = userMoocRepository.findByUserIdAndMoocId(user.getId(), mooc.getId());
 
                 if (userMooc.isPresent()) {
-                    Performance desempeno = new Performance();
-                    desempeno.setUsuarioMooc(userMooc.get());
-                    desempeno.setQualification(calificacion);
-                    desempeno.setStatus(cursoConcluido.charAt(0));
-                    desempeno.setMatricula(matricula);
-                    desempeno.setDomain(dominio);
-                    performanceRepository.save(desempeno);
+                    Performance performance = new Performance();
+                    performance.setUsuarioMooc(userMooc.get());
+                    performance.setQualification(qualification);
+                    performance.setStatus(courseCompleted.charAt(0));
+                    performance.setMatricula(matricula);
+                    performance.setDomain(domain);
+                    performanceRepository.save(performance);
                 } else {
                     System.out.println("No se encontró relación entre el usuario " + matricula + " y el MOOC " + mooc.getId() + ". Saltando esta fila.");
                 }
             } catch (Exception e) {
                 System.out.println("Error al procesar la fila " + row.getRowNum() + ": " + e.getMessage());
-                continue; // Continuar con la siguiente fila en caso de error
+                continue;
             }
         }
     }
 
     private String getCourtDate(Sheet sheet) {
         Row headerRow = sheet.getRow(0);
-        Cell fechaCorteCell = headerRow.getCell(0);
-        return fechaCorteCell.getStringCellValue().replace("Fecha de Corte de Datos: ", "");
+        Cell cutoffDateCell = headerRow.getCell(0);
+        return cutoffDateCell.getStringCellValue().replace("Fecha de Corte de Datos: ", "");
     }
 
     private Date parseCutoffDate(String fechaCorteStr) {
